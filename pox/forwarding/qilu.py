@@ -82,18 +82,19 @@ class LearningSwitch (object):
       if packet.dst not in self.macToPort: 
         flood("Port for %s unknown -- flooding" % (packet.dst,)) 
       else:
+        log.debug("installing flow for %s.%i -> %s.%i" %
+                  (packet.src, event.port, packet.dst, port))
+        msg = of.ofp_flow_mod()
+        msg.match = of.ofp_match.from_packet(packet, event.port)
+        msg.idle_timeout = 10
+        msg.hard_timeout = 30
+        
         for port in self.macToPort.values():
           if port != event.port: # the source cannot be the destionation else loop
-            log.debug("installing flow for %s.%i -> %s.%i" %
-                      (packet.src, event.port, packet.dst, port))
-            msg = of.ofp_flow_mod()
-            msg.match = of.ofp_match.from_packet(packet, event.port)
-            msg.idle_timeout = 10
-            msg.hard_timeout = 30
             msg.actions.append(of.ofp_action_output(port = port))
-            msg.data = event.ofp # 6a
-            self.connection.send(msg)
-
+        
+        msg.data = event.ofp # 6a
+        self.connection.send(msg)
 
 class l2_learning (object):
   """
